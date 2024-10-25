@@ -51,21 +51,21 @@ from datetime import date
 import cml.data_v1 as cmldata
 import pyspark.pandas as ps
 
-
+# SET USER VARIABLES
 USERNAME = os.environ["PROJECT_OWNER"]
 CONNECTION_NAME = "telefonicabr-az-dl"
-DATE = date.today()
-EXPERIMENT_NAME = "xgboostClf-{0}".format(USERNAME)
 
+# SET MLFLOW EXPERIMENT NAME
+EXPERIMENT_NAME = "xgboostClf-{0}".format(USERNAME)
 mlflow.set_experiment(EXPERIMENT_NAME)
 
+# CREATE SPARK SESSION WITH DATA CONNECTIONS
 conn = cmldata.get_connection(CONNECTION_NAME)
 spark = conn.get_spark_session()
 
-# ICEBERG SILVER TABLE
-df = spark.sql("SELECT * FROM SPARK_CATALOG.TELCO_MEDALLION.PRODUCTS_SILVER")
-df.count()
-df.printSchema()
+# READ LATEST ICEBERG METADATA
+snapshot_id = spark.read.format("iceberg").load('SPARK_CATALOG.TELCO_MEDALLION.PRODUCTS_SILVER.snapshots').select("snapshot_id").tail(1)[0][0]
+committed_at = spark.read.format("iceberg").load('SPARK_CATALOG.TELCO_MEDALLION.PRODUCTS_SILVER.snapshots').select("committed_at").tail(1)[0][0].strftime('%m/%d/%Y')
 
 df_from_sql = ps.read_table('SPARK_CATALOG.TELCO_MEDALLION.PRODUCTS_SILVER')
 df_from_sql = df_from_sql[["FL_VIVO_TOTAL", "TAXPIS", "TAXCOFINS", "TAXISS", "QTDD_BYTE_TFGD"]]
@@ -77,6 +77,17 @@ df['QTDD_BYTE_TFGD'] = np.where(df['QTDD_BYTE_TFGD'] <= 200000, 0, 1)
 test_size = 0.3
 X_train, X_test, y_train, y_test = train_test_split(df.drop("QTDD_BYTE_TFGD", axis=1), df["QTDD_BYTE_TFGD"], test_size=test_size)
 
+# SET MLFLOW TAGS
+tags = {
+  "iceberg_snapshot_id": snapshot_id,
+  "iceberg_snapshot_committed_at": committed_at,
+  "row_count": df.count()
+}
+
+# TRAIN TEST SPLIT DATA
+X_train, X_test, y_train, y_test = train_test_split(df.drop("QTDD_BYTE_TFGD", axis=1), df["QTDD_BYTE_TFGD"], test_size=0.3)
+
+# MLFLOW EXPERIMENT RUN
 with mlflow.start_run():
   
     model = XGBClassifier(use_label_encoder=False, eval_metric="logloss")
@@ -107,6 +118,9 @@ with mlflow.start_run():
     mlflow.xgboost.log_model(model, artifact_path="artifacts")#, registered_model_name="my_xgboost_model"
 
 
+mlflow.end_run()
+
+# MLFLOW CLIENT EXPERIMENT METADATA
 def getLatestExperimentInfo(experimentName):
     """
     Method to capture the latest Experiment Id and Run ID for the provided experimentName

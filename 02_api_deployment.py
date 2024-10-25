@@ -48,9 +48,10 @@ from mlops import ModelDeployment
 client = cmlapi.default_client()
 client.list_projects()
 
-projectId = os.environ['CDSW_PROJECT_ID']
-username = os.environ["PROJECT_OWNER"]
-experimentName = "xgboostReg-autologging-{0}".format(USERNAME)
+USERNAME = os.environ["PROJECT_OWNER"]
+CONNECTION_NAME = "telefonicabr-az-dl"
+DATE = date.today()
+experimentName = "xgboostClf-{0}".format(USERNAME)
 
 experimentId = mlflow.get_experiment_by_name(experimentName).experiment_id
 runsDf = mlflow.search_runs(experimentId, run_view_type=1)
@@ -60,8 +61,8 @@ experimentRunId = runsDf.iloc[-1]['run_id']
 
 deployment = ModelDeployment(client, projectId, username, experimentName, experimentId)
 
-modelPath = "model"
-modelName = "XGBReg-" + username
+modelPath = "artifacts"
+modelName = "XGBClf-" + USERNAME
 
 # HOLD FOR A MOMENT AND THEN RUN THE FOLLOWING
 registeredModelResponse = deployment.registerModelFromExperimentRun(modelName, experimentId, experimentRunId, modelPath)
@@ -81,4 +82,4 @@ modelBuildId = createModelBuildResponse.id
 deployment.createModelDeployment(modelBuildId, projectId, modelCreationId)
 
 ## NOW TRY A REQUEST WITH THIS PAYLOAD!
-#{"dataframe_split": {"columns": ["FL_VIVO_TOTAL", "TAXPIS", "TAXCOFINS", "TAXISS], "data":[[35.5, 200.5, 30.5, 14.5]]}}
+#{"dataframe_split": {"columns": ["FL_VIVO_TOTAL", "TAXPIS", "TAXCOFINS", "TAXISS"], "data":[[35.5, 200.5, 30.5, 14.5]]}}
