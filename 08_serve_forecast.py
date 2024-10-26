@@ -41,13 +41,15 @@
 # ###########################################################################
 
 import os
+import json
 import mlflow
 import pandas as pd
 from prophet import Prophet, serialize
 #import cdsw
 
 # Load the model saved earlier.
-prophetModel = '/home/cdsw/.experiments/6fh0-va8g-h4t9-ie82/nuh1-jr4y-5gwb-zz4g/prophet_model'
+prophetModel = '/home/cdsw/.experiments/lq9b-tbcu-23e9-64h9/b30r-w35u-y02z-lxlo/artifacts/prophet_model'
+loaded_model = mlflow.prophet.load_model(prophetModel)
 
 # *Note:* If you want to test this in a session, comment out the line
 # `@cdsw.model_metrics` below. Don't forget to uncomment when you
@@ -59,20 +61,23 @@ prophetModel = '/home/cdsw/.experiments/6fh0-va8g-h4t9-ie82/nuh1-jr4y-5gwb-zz4g/
 
 def predict(args):
     # Load JSON data
+    #print("print arg types:")
+    #print(type(args))
     #data = json.loads(args)
-
+    #print("print type data:")
+    #print(type(data))
     # Create DataFrame
     #df = pd.DataFrame({'ds': pd.to_datetime(data['dates'])})
-    df = pd.DataFrame(data=args, dtype='datetime64[ns]')
-
-    # Load model as a PyFuncModel.
-    loaded_model = mlflow.prophet.load_model(prophetModel)
-
+    df = pd.DataFrame(data=args, dtype='datetime64[ns]', index=[1])
+    df.columns=["ds"]
+    df.head()
     # Predict on a Pandas DataFrame.
     forecast = loaded_model.predict(df)
     forecast = forecast[["ds", "yhat"]]
 
     return {"data": dict(df), "forecast": dict(forecast)}
 
-#args = """{"ds": "1704067200"}"""
+
+#args = """{"dates": [694224000000, 696902400000, 699408000000]}"""
+#args = {"ds": "694224000000"}
 #predict(args)
