@@ -75,7 +75,7 @@ def predict(args):
     forecast = loaded_model.predict(df)
     forecast = forecast[["ds", "yhat"]]
 
-    return {"data": dict(df), "forecast": dict(forecast)}
+    return {"data": df.to_json(), "forecast": forecast.to_json()}
 
 
 #args = """{"dates": [694224000000, 696902400000, 699408000000]}"""
